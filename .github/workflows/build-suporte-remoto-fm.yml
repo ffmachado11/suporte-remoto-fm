@@ -106,9 +106,20 @@ jobs:
           if (-not $runnerResource) { throw "Branded Runner.res was not generated" }
           Copy-Item -Force $runnerResource.FullName .\libs\portable\Runner.res
 
+          # Rename the runtime executable to match the branded APP_NAME
+          # (SuporteRemotoFM). The installer looks for "<APP_NAME>.exe" at
+          # runtime, so shipping rustdesk.exe caused exit code 9059 (file not
+          # found). Rename before packing so the self-extracting installer
+          # deploys SuporteRemotoFM.exe to Program Files.
+          $releaseDir = ".\flutter\build\windows\x64\runner\Release"
+          $srcExe = Join-Path $releaseDir "rustdesk.exe"
+          $brandedExe = Join-Path $releaseDir "SuporteRemotoFM.exe"
+          if (-not (Test-Path $srcExe)) { throw "Expected rustdesk.exe not found in $releaseDir" }
+          Copy-Item -Force $srcExe $brandedExe
+
           python -m pip install -r .\libs\portable\requirements.txt
           Push-Location .\libs\portable
-          python .\generate.py -f ..\..\flutter\build\windows\x64\runner\Release -o . -e ..\..\flutter\build\windows\x64\runner\Release\rustdesk.exe
+          python .\generate.py -f ..\..\flutter\build\windows\x64\runner\Release -o . -e ..\..\flutter\build\windows\x64\runner\Release\SuporteRemotoFM.exe
           Pop-Location
           if ($LASTEXITCODE -ne 0) { throw "Portable packer build failed with exit code $LASTEXITCODE" }
 
