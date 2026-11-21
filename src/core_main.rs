@@ -49,7 +49,7 @@ pub fn core_main() -> Option<CoreMainAction> {
     // FM Tecnologia branded build: keep the application identity and the
     // self-hosted infrastructure fixed so deployed clients cannot drift back
     // to the public RustDesk network.
-    *config::APP_NAME.write().unwrap() = "Suporte Remoto FM".to_owned();
+    *config::APP_NAME.write().unwrap() = "SuporteRemotoFM".to_owned();
     config::Config::set_option(
         "custom-rendezvous-server".into(),
         "rustdesk.fmtecnologia.com.br".into(),
