@@ -96,10 +96,24 @@ jobs:
       - name: Build branded installer
         shell: powershell
         run: |
-          python .\build.py --portable --flutter --hwcodec --vram
+          python .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
           if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE" }
-          $built = Get-Item .\rustdesk-*-install.exe
-          Copy-Item $built.FullName .\Suporte-Remoto-FM-1.5.3-x64.exe
+
+          # Reuse the resource compiled from our branded Runner.rc in the
+          # self-extracting packer, so Windows displays the FM identity before
+          # the application has even been installed.
+          $runnerResource = Get-ChildItem . -Recurse -Filter Runner.res | Select-Object -First 1
+          if (-not $runnerResource) { throw "Branded Runner.res was not generated" }
+          Copy-Item -Force $runnerResource.FullName .\libs\portable\Runner.res
+
+          python -m pip install -r .\libs\portable\requirements.txt
+          Push-Location .\libs\portable
+          python .\generate.py -f ..\..\flutter\build\windows\x64\runner\Release -o . -e ..\..\flutter\build\windows\x64\runner\Release\rustdesk.exe
+          Pop-Location
+          if ($LASTEXITCODE -ne 0) { throw "Portable packer build failed with exit code $LASTEXITCODE" }
+
+          $packer = Get-Item .\target\release\rustdesk-portable-packer.exe
+          Copy-Item $packer.FullName .\Suporte-Remoto-FM-1.5.3-x64.exe
 
       - name: Verify generated executable
         shell: powershell
@@ -118,4 +132,3 @@ jobs:
             Suporte-Remoto-FM-1.5.3-x64.exe
             SHA256SUMS.txt
           if-no-files-found: error
-
