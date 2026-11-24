@@ -62,6 +62,40 @@ pub fn core_main() -> Option<CoreMainAction> {
         "key".into(),
         "YomzA7TrHBJJOiRKhDk6N3rUR6wB2n6S2zKreZLB6IY=".into(),
     );
+    // FM Tecnologia: variante "Quick Support FM" (feature `fm_qs`).
+    // Cliente enxuto, UI travada e senha permanente FIXA embutida.
+    // A senha NUNCA fica no codigo: o hash H1 (prefixo "00") e o salt sao
+    // injetados em tempo de compilacao via GitHub Secrets
+    // (FM_QS_PW_HASH / FM_QS_SALT). Sem eles, o build fm_qs falha.
+    #[cfg(feature = "fm_qs")]
+    {
+        use hbb_common::config::HARD_SETTINGS;
+        // APP_NAME proprio: instala em pasta separada da versao completa e
+        // casa com o nome do executavel empacotado (QuickSupportFM.exe).
+        *config::APP_NAME.write().unwrap() = "QuickSupportFM".to_owned();
+        {
+            let mut hard = HARD_SETTINGS.write().unwrap();
+            hard.insert("password".to_owned(), env!("FM_QS_PW_HASH").to_owned());
+            hard.insert("salt".to_owned(), env!("FM_QS_SALT").to_owned());
+        }
+        // Trava a UI no essencial (so a janela de conexao, sem configuracoes).
+        for (k, v) in [
+            ("allow-only-conn-window-open", "Y"),
+            ("hide-general-settings", "Y"),
+            ("hide-security-settings", "Y"),
+            ("hide-network-settings", "Y"),
+            ("hide-server-settings", "Y"),
+            ("hide-proxy-settings", "Y"),
+            ("hide-stop-service", "Y"),
+            ("hide-tray", "Y"),
+            ("hide-powered-by-me", "Y"),
+            ("disable-change-permanent-password", "Y"),
+            ("remove-preset-password-warning", "Y"),
+            ("verification-method", "use-permanent-password"),
+        ] {
+            config::Config::set_option(k.into(), v.into());
+        }
+    }
     crate::load_custom_client();
     #[cfg(windows)]
     if !crate::platform::windows::bootstrap() {

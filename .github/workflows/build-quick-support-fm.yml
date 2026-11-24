@@ -1,0 +1,146 @@
+name: Build Quick Support FM
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "qs-v*"
+
+permissions:
+  contents: read
+
+env:
+  RUST_VERSION: "1.75.0"
+  FLUTTER_VERSION: "3.24.5"
+  VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
+  VCPKG_ROOT: "C:\\vcpkg"
+  VCPKG_DEFAULT_HOST_TRIPLET: "x64-windows-static"
+
+jobs:
+  generate-bridge:
+    uses: ./.github/workflows/bridge.yml
+
+  build-windows-x64:
+    needs: generate-bridge
+    runs-on: windows-2022
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore generated Flutter bridge
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-artifact
+          path: ./
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install LLVM 15
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "15.0.6"
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          architecture: x64
+
+      - name: Prepare custom RustDesk Flutter engine
+        shell: powershell
+        run: |
+          flutter config --enable-windows-desktop
+          flutter precache --windows
+          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          Expand-Archive windows-x64-release.zip windows-x64-release
+          Copy-Item -Recurse -Force windows-x64-release/* "$env:FLUTTER_ROOT/bin/cache/artifacts/engine/windows-x64-release/"
+
+      - name: Apply Flutter 3.24 compatibility patch
+        shell: bash
+        run: |
+          cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff "$FLUTTER_ROOT/"
+          cd "$FLUTTER_ROOT"
+          git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Prepare vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: ${{ env.VCPKG_ROOT }}
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install native dependencies
+        shell: powershell
+        run: |
+          & "$env:VCPKG_ROOT/vcpkg.exe" install --triplet x64-windows-static --x-install-root="$env:VCPKG_ROOT/installed"
+          if ($LASTEXITCODE -ne 0) { throw "vcpkg failed with exit code $LASTEXITCODE" }
+
+      - name: Build Quick Support installer
+        shell: powershell
+        env:
+          FM_QS_PW_HASH: ${{ secrets.FM_QS_PW_HASH }}
+          FM_QS_SALT: ${{ secrets.FM_QS_SALT }}
+        run: |
+          # Variante Quick Support FM: feature `fm_qs` embute a senha fixa
+          # (hash vindo de GitHub Secrets) e trava a UI no essencial.
+          if (-not $env:FM_QS_PW_HASH -or -not $env:FM_QS_SALT) { throw "Secrets FM_QS_PW_HASH/FM_QS_SALT ausentes" }
+          python .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram --fm-qs
+          if ($LASTEXITCODE -ne 0) { throw "Build failed with exit code $LASTEXITCODE" }
+
+          # Reaproveita o resource da Runner.rc com a identidade FM.
+          $runnerResource = Get-ChildItem . -Recurse -Filter Runner.res | Select-Object -First 1
+          if (-not $runnerResource) { throw "Branded Runner.res was not generated" }
+          Copy-Item -Force $runnerResource.FullName .\libs\portable\Runner.res
+
+          # APP_NAME da variante = QuickSupportFM; o instalador procura "<APP_NAME>.exe"
+          # (sem isso: exit code 9059). Nome do exe TEM que casar com o APP_NAME.
+          $releaseDir = ".\flutter\build\windows\x64\runner\Release"
+          $srcExe = Join-Path $releaseDir "rustdesk.exe"
+          $brandedExe = Join-Path $releaseDir "QuickSupportFM.exe"
+          if (-not (Test-Path $srcExe)) { throw "Expected rustdesk.exe not found in $releaseDir" }
+          Copy-Item -Force $srcExe $brandedExe
+
+          python -m pip install -r .\libs\portable\requirements.txt
+          Push-Location .\libs\portable
+          python .\generate.py -f ..\..\flutter\build\windows\x64\runner\Release -o . -e ..\..\flutter\build\windows\x64\runner\Release\QuickSupportFM.exe
+          Pop-Location
+          if ($LASTEXITCODE -ne 0) { throw "Portable packer build failed with exit code $LASTEXITCODE" }
+
+          $packer = Get-Item .\target\release\rustdesk-portable-packer.exe
+          Copy-Item $packer.FullName .\Quick-Support-FM-1.5.3-x64.exe
+
+      - name: Verify generated executable
+        shell: powershell
+        run: |
+          $file = Get-Item .\Quick-Support-FM-1.5.3-x64.exe
+          if ($file.Length -lt 10MB) { throw "Generated installer is unexpectedly small" }
+          $hash = Get-FileHash $file.FullName -Algorithm SHA256
+          "$($hash.Hash)  $($file.Name)" | Set-Content .\SHA256SUMS.txt
+          Get-Item .\Quick-Support-FM-1.5.3-x64.exe | Select-Object Name,Length
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quick-Support-FM-Windows-x64
+          path: |
+            Quick-Support-FM-1.5.3-x64.exe
+            SHA256SUMS.txt
+          if-no-files-found: error

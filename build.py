@@ -135,6 +135,13 @@ def make_parser():
         help='Build windows portable'
     )
     parser.add_argument(
+        '--fm-qs',
+        dest='fm_qs',
+        action='store_true',
+        help='FM Tecnologia: build the "Quick Support FM" variant (cargo feature fm_qs): '
+             'lean installable client, fixed embedded password, locked-down UI.'
+    )
+    parser.add_argument(
         '--unix-file-copy-paste',
         action='store_true',
         help='Build with unix file copy paste feature'
@@ -320,6 +327,8 @@ def get_features(args):
         features.append('vram')
     if args.flutter:
         features.append('flutter')
+    if getattr(args, 'fm_qs', False):
+        features.append('fm_qs')
     if args.unix_file_copy_paste:
         features.append('unix-file-copy-paste')
     if args.drm:

@@ -22,6 +22,9 @@ path = "src/service.rs"
 
 [features]
 inline = []
+# FM Tecnologia: variante "Quick Support FM" (cliente enxuto + senha fixa embutida).
+# Compila o MESMO binario, mas trava a UI e injeta a senha preset quando ligada.
+fm_qs = []
 use_samplerate = ["samplerate", "libsamplerate-sys"]
 use_rubato = ["rubato"]
 use_dasp = ["dasp"]
