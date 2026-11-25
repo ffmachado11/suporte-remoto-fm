@@ -22,6 +22,10 @@ jobs:
 
   build-windows-x64:
     needs: generate-bridge
+    strategy:
+      fail-fast: false
+      matrix:
+        artwork: [a, b]
     runs-on: windows-2022
     timeout-minutes: 180
 
@@ -30,6 +34,16 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      - name: Apply FM artwork and Windows branding
+        shell: powershell
+        run: |
+          Copy-Item branding/fm/logo-${{ matrix.artwork }}.jpg flutter/assets/fm-watermark.jpg
+          Copy-Item branding/fm/icon.png flutter/assets/icon.png
+          Copy-Item branding/fm/app_icon.ico flutter/windows/runner/resources/app_icon.ico
+          $rc = Get-Content flutter/windows/runner/Runner.rc -Raw
+          $rc = $rc.Replace('Suporte Remoto FM', 'Quick Support FM').Replace('SuporteRemotoFM', 'QuickSupportFM')
+          Set-Content flutter/windows/runner/Runner.rc $rc -Encoding UTF8
 
       - name: Restore generated Flutter bridge
         uses: actions/download-artifact@v4
@@ -125,22 +139,47 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Portable packer build failed with exit code $LASTEXITCODE" }
 
           $packer = Get-Item .\target\release\rustdesk-portable-packer.exe
-          Copy-Item $packer.FullName .\Quick-Support-FM-1.5.3-x64.exe
+          Copy-Item $packer.FullName .\Quick-Support-FM-Logo-${{ matrix.artwork }}-install.exe
 
       - name: Verify generated executable
         shell: powershell
         run: |
-          $file = Get-Item .\Quick-Support-FM-1.5.3-x64.exe
+          $file = Get-Item .\Quick-Support-FM-Logo-${{ matrix.artwork }}-install.exe
           if ($file.Length -lt 10MB) { throw "Generated installer is unexpectedly small" }
           $hash = Get-FileHash $file.FullName -Algorithm SHA256
-          "$($hash.Hash)  $($file.Name)" | Set-Content .\SHA256SUMS.txt
-          Get-Item .\Quick-Support-FM-1.5.3-x64.exe | Select-Object Name,Length
+          "$($hash.Hash)  $($file.Name)" | Set-Content .\SHA256SUMS-${{ matrix.artwork }}.txt
+          Get-Item .\Quick-Support-FM-Logo-${{ matrix.artwork }}-install.exe | Select-Object Name,Length
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: Quick-Support-FM-Windows-x64
+          name: Quick-Support-FM-Logo-${{ matrix.artwork }}-Windows-x64
           path: |
-            Quick-Support-FM-1.5.3-x64.exe
-            SHA256SUMS.txt
+            Quick-Support-FM-Logo-${{ matrix.artwork }}-install.exe
+            SHA256SUMS-${{ matrix.artwork }}.txt
           if-no-files-found: error
+
+  publish-fm-variants:
+    needs: build-windows-x64
+    if: startsWith(github.ref, 'refs/tags/qs-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Quick-Support-FM-Logo-*-Windows-x64
+          path: dist
+          merge-multiple: true
+      - name: Verify and publish both installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          cd dist
+          for manifest in SHA256SUMS-*.txt; do
+            tr -d '\r' < "$manifest" | sha256sum -c -
+          done
+          gh release create "$RELEASE_TAG" ./*.exe ./SHA256SUMS-*.txt --title "Quick Support FM — duas artes e acesso permanente" --notes "Logo A: símbolo FM. Logo B: FM Tecnologia. Execute o instalador e conclua a instalação com permissão de administrador para habilitar o serviço automático do Windows. As variantes substituem uma à outra na mesma pasta QuickSupportFM; instale uma por vez para comparar. Senha configurada privadamente. Base RustDesk, AGPL-3.0; código-fonte disponível nesta tag. Compilação verificada; teste visual e após reinício no Windows ainda necessário."

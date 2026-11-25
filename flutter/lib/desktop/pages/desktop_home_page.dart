@@ -133,6 +133,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         color: Theme.of(context).colorScheme.background,
         child: Stack(
           children: [
+            if (bind.mainGetAppNameSync() == 'QuickSupportFM')
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Opacity(
+                    opacity: 0.10,
+                    child: Image.asset('assets/fm-watermark.jpg',
+                        fit: BoxFit.contain, excludeFromSemantics: true),
+                  ),
+                ),
+              ),
             Column(
               children: [
                 SingleChildScrollView(
@@ -401,7 +411,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    translate("Your Desktop"),
+                    bind.mainGetAppNameSync() == 'QuickSupportFM'
+                        ? 'Suporte FM Tecnologia'
+                        : translate("Your Desktop"),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -583,7 +595,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       bool? closeButton,
       String? closeOption}) {
     if (bind.mainGetBuildinOption(key: kOptionHideHelpCards) == 'Y' &&
-        content != 'install_daemon_tip') {
+        content != 'install_daemon_tip' &&
+        !(bind.mainGetAppNameSync() == 'QuickSupportFM' &&
+            content == 'install_tip')) {
       return const SizedBox();
     }
     void closeCard() async {

@@ -111,6 +111,7 @@ pub fn core_main() -> Option<CoreMainAction> {
             let mut ow = hbb_common::config::OVERWRITE_SETTINGS.write().unwrap();
             ow.insert("verification-method".to_owned(), "use-permanent-password".to_owned());
             ow.insert("approve-mode".to_owned(), "password".to_owned());
+            ow.insert("stop-service".to_owned(), "N".to_owned());
         }
         // Trava a UI no essencial (so a janela de conexao, sem configuracoes).
         for (k, v) in [
