@@ -77,6 +77,40 @@ pub fn core_main() -> Option<CoreMainAction> {
             let mut hard = HARD_SETTINGS.write().unwrap();
             hard.insert("password".to_owned(), env!("FM_QS_PW_HASH").to_owned());
             hard.insert("salt".to_owned(), env!("FM_QS_SALT").to_owned());
+            // Modo "so receber conexao" (estilo TeamViewer QuickSupport):
+            // janela mostra apenas ID/senha, sem painel de controlar outro PC,
+            // sem historico/favoritos/catalogo.
+            hard.insert("conn-type".to_owned(), "incoming".to_owned());
+        }
+        // Opcoes de UI "builtin" (sao lidas de BUILTIN_SETTINGS, nao de
+        // Config::set_option -- por isso a fix1 nao escondia nada).
+        {
+            let mut builtin = hbb_common::config::BUILTIN_SETTINGS.write().unwrap();
+            for k in [
+                "allow-only-conn-window-open",
+                "hide-security-settings",
+                "hide-network-settings",
+                "hide-server-settings",
+                "hide-proxy-settings",
+                "hide-username-on-card",
+                "hide-help-cards",
+                "hide-tray",
+                "hide-powered-by-me",
+                "hide-stop-service",
+                "disable-change-permanent-password",
+                "remove-preset-password-warning",
+                "disable-settings",
+                "disable-account",
+                "disable-ab",
+                "disable-discovery-panel",
+            ] {
+                builtin.insert(k.to_owned(), "Y".to_owned());
+            }
+        }
+        {
+            let mut ow = hbb_common::config::OVERWRITE_SETTINGS.write().unwrap();
+            ow.insert("verification-method".to_owned(), "use-permanent-password".to_owned());
+            ow.insert("approve-mode".to_owned(), "password".to_owned());
         }
         // Trava a UI no essencial (so a janela de conexao, sem configuracoes).
         for (k, v) in [
