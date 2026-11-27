@@ -7,3 +7,6 @@ Senha permanente: cofre /home/fabio/.ssh/quick-support-fm.env, hash H1 e salt vi
 Build: workflow build-quick-support-fm.yml, tags qs-v*. Instaladores substituem a mesma instalação; comparar um por vez.
 Superfície de regressão: desktop_home_page.dart (preenchimento de dois campos QuickSupport); workflow específico QuickSupport (logo e intensidade das variantes). Autenticação mantém implementação existente, com novos secrets.
 Validação: diff --check e inspeção do hash conforme validate_password_plain/validate_password_storage. Build Windows e teste visual/conexão real ainda pendentes.
+
+## Aprovação 2026-11-27
+Fábio aprovou visualmente a versão suave (10%) e determinou manter somente ela. Workflow limitado a suave. Releases antigas QuickSupport e arte forte removidas da distribuição; código-fonte e produto Suporte Remoto FM completo preservados.

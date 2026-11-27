@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        artwork: [suave, forte]
+        artwork: [suave]
     runs-on: windows-2022
     timeout-minutes: 180
 
@@ -177,7 +177,7 @@ jobs:
           pattern: Quick-Support-FM-Logo-*-Windows-x64
           path: dist
           merge-multiple: true
-      - name: Verify and publish both installers
+      - name: Verify and publish installer
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -188,4 +188,4 @@ jobs:
           for manifest in SHA256SUMS-*.txt; do
             tr -d '\r' < "$manifest" | sha256sum -c -
           done
-          gh release create "$RELEASE_TAG" ./*.exe ./SHA256SUMS-*.txt --title "Quick Support FM — logo contínua e acesso permanente" --notes "Mesma logo FM Tecnologia nas versões suave (10%) e forte (20%). Campos ID e senha sem preenchimento sobre a marca. Execute o instalador e conclua a instalação com permissão de administrador para habilitar o serviço automático do Windows. As variantes substituem uma à outra na mesma pasta QuickSupportFM; instale uma por vez para comparar. Senha configurada privadamente. Base RustDesk, AGPL-3.0; código-fonte disponível nesta tag. Compilação verificada; teste visual e após reinício no Windows ainda necessário."
+          gh release create "$RELEASE_TAG" ./*.exe ./SHA256SUMS-*.txt --title "Quick Support FM — logo contínua e acesso permanente" --notes "Logo FM Tecnologia suave (10%), aprovada. Campos ID e senha sem preenchimento sobre a marca. Execute o instalador e conclua a instalação com permissão de administrador para habilitar o serviço automático do Windows. As variantes substituem uma à outra na mesma pasta QuickSupportFM; instale uma por vez para comparar. Senha configurada privadamente. Base RustDesk, AGPL-3.0; código-fonte disponível nesta tag. Compilação verificada; teste visual e após reinício no Windows ainda necessário."
