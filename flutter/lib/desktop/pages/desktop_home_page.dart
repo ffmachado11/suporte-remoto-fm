@@ -137,7 +137,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               Positioned.fill(
                 child: IgnorePointer(
                   child: Opacity(
-                    opacity: 0.10,
+                    opacity: 0.10, // FM_WATERMARK_OPACITY
                     child: Image.asset('assets/fm-watermark.jpg',
                         fit: BoxFit.contain, excludeFromSemantics: true),
                   ),
@@ -246,6 +246,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         readOnly: true,
                         decoration: InputDecoration(
                           border: InputBorder.none,
+                          filled: bind.mainGetAppNameSync() == 'QuickSupportFM'
+                              ? false
+                              : null,
                           contentPadding: EdgeInsets.only(top: 10, bottom: 10),
                         ),
                         style: TextStyle(
@@ -343,6 +346,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                             readOnly: true,
                             decoration: InputDecoration(
                               border: InputBorder.none,
+                              filled: bind.mainGetAppNameSync() == 'QuickSupportFM'
+                                  ? false
+                                  : null,
                               contentPadding:
                                   EdgeInsets.only(top: 14, bottom: 10),
                             ),

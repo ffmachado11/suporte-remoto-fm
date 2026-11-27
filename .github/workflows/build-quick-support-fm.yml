@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        artwork: [a, b]
+        artwork: [suave, forte]
     runs-on: windows-2022
     timeout-minutes: 180
 
@@ -38,7 +38,13 @@ jobs:
       - name: Apply FM artwork and Windows branding
         shell: powershell
         run: |
-          Copy-Item branding/fm/logo-${{ matrix.artwork }}.jpg flutter/assets/fm-watermark.jpg
+          Copy-Item branding/fm/logo-b.jpg flutter/assets/fm-watermark.jpg
+          if ('${{ matrix.artwork }}' -eq 'forte') {
+            $page = 'flutter/lib/desktop/pages/desktop_home_page.dart'
+            $content = Get-Content $page -Raw
+            $content = $content.Replace('opacity: 0.10, // FM_WATERMARK_OPACITY', 'opacity: 0.20, // FM_WATERMARK_OPACITY')
+            Set-Content $page $content -Encoding UTF8
+          }
           Copy-Item branding/fm/icon.png flutter/assets/icon.png
           Copy-Item branding/fm/app_icon.ico flutter/windows/runner/resources/app_icon.ico
           $rc = Get-Content flutter/windows/runner/Runner.rc -Raw
@@ -182,4 +188,4 @@ jobs:
           for manifest in SHA256SUMS-*.txt; do
             tr -d '\r' < "$manifest" | sha256sum -c -
           done
-          gh release create "$RELEASE_TAG" ./*.exe ./SHA256SUMS-*.txt --title "Quick Support FM — duas artes e acesso permanente" --notes "Logo A: símbolo FM. Logo B: FM Tecnologia. Execute o instalador e conclua a instalação com permissão de administrador para habilitar o serviço automático do Windows. As variantes substituem uma à outra na mesma pasta QuickSupportFM; instale uma por vez para comparar. Senha configurada privadamente. Base RustDesk, AGPL-3.0; código-fonte disponível nesta tag. Compilação verificada; teste visual e após reinício no Windows ainda necessário."
+          gh release create "$RELEASE_TAG" ./*.exe ./SHA256SUMS-*.txt --title "Quick Support FM — logo contínua e acesso permanente" --notes "Mesma logo FM Tecnologia nas versões suave (10%) e forte (20%). Campos ID e senha sem preenchimento sobre a marca. Execute o instalador e conclua a instalação com permissão de administrador para habilitar o serviço automático do Windows. As variantes substituem uma à outra na mesma pasta QuickSupportFM; instale uma por vez para comparar. Senha configurada privadamente. Base RustDesk, AGPL-3.0; código-fonte disponível nesta tag. Compilação verificada; teste visual e após reinício no Windows ainda necessário."
